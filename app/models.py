@@ -62,6 +62,7 @@ class Movimentacao(Base):
     desconto_percentual: Mapped[int] = mapped_column(Integer, default=0)
     motivo: Mapped[str | None] = mapped_column(String(100))
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    usuario_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class Usuario(Base):

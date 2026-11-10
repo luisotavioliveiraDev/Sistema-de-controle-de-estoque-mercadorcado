@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Lote, Movimentacao, Produto
+from app.models import Lote, Movimentacao, Produto, Usuario
 from app.schemas import (
     BaixaLote,
     LoteCreate,
@@ -15,8 +15,8 @@ from app.schemas import (
     VendaCreate,
     VendaOut,
 )
-from app.services import desconto_sugerido, dias_para_vencer, status_validade
 from app.security import usuario_atual
+from app.services import desconto_sugerido, dias_para_vencer, status_validade
 
 router = APIRouter(
     tags=["Estoque"],
@@ -43,15 +43,20 @@ def converter_para_base(produto: Produto, quantidade: Decimal, unidade: str | No
 
 
 @router.post("/lotes", response_model=LoteOut, status_code=201)
-def entrada_lote(dados: LoteCreate, db: Session = Depends(get_db)):
+def entrada_lote(
+    dados: LoteCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(usuario_atual),
+):
     produto = db.get(Produto, dados.produto_id)
     if not produto or not produto.ativo:
         raise HTTPException(404, "Produto não encontrado")
+
     if dados.validade < date.today():
         raise HTTPException(
             400, "Não é possível dar entrada em lote com validade já vencida"
         )
-    
+
     quantidade_base = converter_para_base(produto, dados.quantidade, dados.unidade)
 
     lote = Lote(
@@ -70,6 +75,7 @@ def entrada_lote(dados: LoteCreate, db: Session = Depends(get_db)):
             lote_id=lote.id,
             quantidade=quantidade_base,
             custo_unitario=dados.custo_unitario,
+            usuario_id=usuario.id,
         )
     )
     db.commit()
@@ -120,7 +126,11 @@ def lotes_a_vencer(dias: int = 30, db: Session = Depends(get_db)):
 
 
 @router.post("/vendas", response_model=VendaOut)
-def vender(dados: VendaCreate, db: Session = Depends(get_db)):
+def vender(
+    dados: VendaCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(usuario_atual),
+):
     """Baixa o estoque pelo método FEFO e aplica o desconto de validade de cada lote."""
     produto = db.get(Produto, dados.produto_id)
     if not produto or not produto.ativo:
@@ -172,6 +182,7 @@ def vender(dados: VendaCreate, db: Session = Depends(get_db)):
                 custo_unitario=lote.custo_unitario,
                 preco_unitario=preco_final,
                 desconto_percentual=desconto,
+                usuario_id=usuario.id,
             )
         )
         usados.append(

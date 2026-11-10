@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Movimentacao, Produto
+from app.models import Movimentacao, Produto, Usuario
 from app.schemas import MovimentacaoOut
 
 router = APIRouter(
@@ -38,18 +38,31 @@ def filtrar_periodo(consulta, inicio: date | None, fim: date | None):
 def listar_movimentacoes(
     produto_id: int | None = None,
     tipo: str | None = None,
+    usuario_id: int | None = None,
     inicio: date | None = None,
     fim: date | None = None,
     db: Session = Depends(get_db),
 ):
     """Histórico de movimentações, da mais recente para a mais antiga."""
-    consulta = select(Movimentacao).order_by(Movimentacao.id.desc())
+    consulta = (
+        select(Movimentacao, Usuario.nome)
+        .outerjoin(Usuario, Usuario.id == Movimentacao.usuario_id)
+        .order_by(Movimentacao.id.desc())
+    )
     if produto_id:
         consulta = consulta.where(Movimentacao.produto_id == produto_id)
     if tipo:
         consulta = consulta.where(Movimentacao.tipo == tipo)
+    if usuario_id:
+        consulta = consulta.where(Movimentacao.usuario_id == usuario_id)
     consulta = filtrar_periodo(consulta, inicio, fim)
-    return db.scalars(consulta).all()
+
+    resultado = []
+    for mov, nome in db.execute(consulta).all():
+        item = MovimentacaoOut.model_validate(mov)
+        item.usuario = nome
+        resultado.append(item)
+    return resultado
 
 
 @router.get("/relatorios/resumo")

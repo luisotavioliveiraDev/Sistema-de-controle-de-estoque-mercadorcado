@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Lote, Movimentacao
+from app.models import Lote, Movimentacao, Usuario
 from app.schemas import PerdaCreate, PerdaOut, PerdaVencidosOut
 from app.security import usuario_atual
 
@@ -19,7 +19,9 @@ router = APIRouter(
 CENTAVOS = Decimal("0.01")
 
 
-def baixar_perda(db: Session, lote: Lote, quantidade: Decimal, motivo: str) -> Decimal:
+def baixar_perda(
+    db: Session, lote: Lote, quantidade: Decimal, motivo: str, usuario_id: int
+) -> Decimal:
     """Tira a quantidade do lote e registra a perda. Retorna o custo perdido."""
     lote.quantidade = Decimal(lote.quantidade) - quantidade
     db.add(
@@ -30,13 +32,18 @@ def baixar_perda(db: Session, lote: Lote, quantidade: Decimal, motivo: str) -> D
             quantidade=quantidade,
             custo_unitario=lote.custo_unitario,
             motivo=motivo,
+            usuario_id=usuario_id,
         )
     )
     return quantidade * Decimal(lote.custo_unitario)
 
 
 @router.post("", response_model=PerdaOut, status_code=201)
-def registrar_perda(dados: PerdaCreate, db: Session = Depends(get_db)):
+def registrar_perda(
+    dados: PerdaCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(usuario_atual),
+):
     """Registra perda de um lote (avaria, quebra, furto...). Sem quantidade = lote inteiro."""
     lote = db.get(Lote, dados.lote_id)
     if not lote or not lote.ativo or Decimal(lote.quantidade) <= 0:
@@ -48,7 +55,7 @@ def registrar_perda(dados: PerdaCreate, db: Session = Depends(get_db)):
             409, f"O lote tem apenas {lote.quantidade} na unidade base"
         )
 
-    custo = baixar_perda(db, lote, quantidade, dados.motivo)
+    custo = baixar_perda(db, lote, quantidade, dados.motivo, usuario.id)
     db.commit()
     return PerdaOut(
         lote_id=lote.id,
@@ -59,7 +66,10 @@ def registrar_perda(dados: PerdaCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/vencidos", response_model=PerdaVencidosOut)
-def baixar_vencidos(db: Session = Depends(get_db)):
+def baixar_vencidos(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(usuario_atual),
+):
     """Dá baixa, como perda, em todos os lotes com validade anterior a hoje."""
     lotes = db.scalars(
         select(Lote).where(
@@ -73,7 +83,7 @@ def baixar_vencidos(db: Session = Depends(get_db)):
     custo_total = Decimal(0)
     for lote in lotes:
         qtd = Decimal(lote.quantidade)
-        custo_total += baixar_perda(db, lote, qtd, "vencido")
+        custo_total += baixar_perda(db, lote, qtd, "vencido", usuario.id)
         quantidade_total += qtd
 
     db.commit()

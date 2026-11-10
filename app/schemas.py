@@ -132,6 +132,8 @@ class MovimentacaoOut(BaseModel):
     desconto_percentual: int
     motivo: str | None
     criado_em: datetime
+    usuario_id: int | None = None
+    usuario: str | None = None
 
 
 class ProdutoUpdate(BaseModel):
