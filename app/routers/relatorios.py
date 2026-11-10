@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal, ROUND_HALF_UP
+from app.security import exigir_perfil
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -9,7 +10,10 @@ from app.database import get_db
 from app.models import Movimentacao, Produto
 from app.schemas import MovimentacaoOut
 
-router = APIRouter(tags=["Relatórios"])
+router = APIRouter(
+    tags=["Relatórios"],
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 
 CENTAVOS = Decimal("0.01")
 

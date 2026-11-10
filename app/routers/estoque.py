@@ -16,8 +16,12 @@ from app.schemas import (
     VendaOut,
 )
 from app.services import desconto_sugerido, dias_para_vencer, status_validade
+from app.security import usuario_atual
 
-router = APIRouter(tags=["Estoque"])
+router = APIRouter(
+    tags=["Estoque"],
+    dependencies=[Depends(usuario_atual)],
+)
 
 CENTAVOS = Decimal("0.01")
 

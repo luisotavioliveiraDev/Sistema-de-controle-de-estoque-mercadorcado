@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Categoria
-from app.schemas import CategoriaCreate, CategoriaOut
 from app.routers import auth, estoque, perdas, produtos, relatorios
+from app.schemas import CategoriaCreate, CategoriaOut
+from app.security import exigir_perfil, usuario_atual
 
 app = FastAPI(title="Controle de Estoque")
 app.include_router(auth.router)
@@ -14,7 +15,13 @@ app.include_router(estoque.router)
 app.include_router(perdas.router)
 app.include_router(relatorios.router)
 
-@app.post("/categorias", response_model=CategoriaOut, status_code=201)
+
+@app.post(
+    "/categorias",
+    response_model=CategoriaOut,
+    status_code=201,
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 def criar_categoria(dados: CategoriaCreate, db: Session = Depends(get_db)):
     existe = db.scalar(select(Categoria).where(Categoria.nome == dados.nome))
     if existe:
@@ -26,12 +33,20 @@ def criar_categoria(dados: CategoriaCreate, db: Session = Depends(get_db)):
     return categoria
 
 
-@app.get("/categorias", response_model=list[CategoriaOut])
+@app.get(
+    "/categorias",
+    response_model=list[CategoriaOut],
+    dependencies=[Depends(usuario_atual)],
+)
 def listar_categorias(db: Session = Depends(get_db)):
     return db.scalars(select(Categoria).where(Categoria.ativo == True)).all()
 
 
-@app.delete("/categorias/{categoria_id}", status_code=204)
+@app.delete(
+    "/categorias/{categoria_id}",
+    status_code=204,
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 def excluir_categoria(categoria_id: int, db: Session = Depends(get_db)):
     categoria = db.get(Categoria, categoria_id)
     if not categoria:

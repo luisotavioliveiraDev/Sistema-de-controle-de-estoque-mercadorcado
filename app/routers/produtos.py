@@ -5,11 +5,17 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Categoria, ConversaoUnidade, Produto
 from app.schemas import ProdutoCreate, ProdutoOut, ProdutoUpdate
+from app.security import exigir_perfil, usuario_atual
 
 router = APIRouter(prefix="/produtos", tags=["Produtos"])
 
 
-@router.post("", response_model=ProdutoOut, status_code=201)
+@router.post(
+    "",
+    response_model=ProdutoOut,
+    status_code=201,
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
     categoria = db.get(Categoria, dados.categoria_id)
     if not categoria or not categoria.ativo:
@@ -38,7 +44,9 @@ def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
     return produto
 
 
-@router.get("", response_model=list[ProdutoOut])
+@router.get(
+    "", response_model=list[ProdutoOut], dependencies=[Depends(usuario_atual)]
+)
 def listar_produtos(categoria_id: int | None = None, db: Session = Depends(get_db)):
     consulta = select(Produto).where(Produto.ativo == True)
     if categoria_id:
@@ -46,7 +54,9 @@ def listar_produtos(categoria_id: int | None = None, db: Session = Depends(get_d
     return db.scalars(consulta).all()
 
 
-@router.get("/{produto_id}", response_model=ProdutoOut)
+@router.get(
+    "/{produto_id}", response_model=ProdutoOut, dependencies=[Depends(usuario_atual)]
+)
 def buscar_produto(produto_id: int, db: Session = Depends(get_db)):
     produto = db.get(Produto, produto_id)
     if not produto or not produto.ativo:
@@ -54,7 +64,11 @@ def buscar_produto(produto_id: int, db: Session = Depends(get_db)):
     return produto
 
 
-@router.put("/{produto_id}", response_model=ProdutoOut)
+@router.put(
+    "/{produto_id}",
+    response_model=ProdutoOut,
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 def editar_produto(
     produto_id: int, dados: ProdutoUpdate, db: Session = Depends(get_db)
 ):
@@ -88,7 +102,11 @@ def editar_produto(
     return produto
 
 
-@router.delete("/{produto_id}", status_code=204)
+@router.delete(
+    "/{produto_id}",
+    status_code=204,
+    dependencies=[Depends(exigir_perfil("gerente"))],
+)
 def excluir_produto(produto_id: int, db: Session = Depends(get_db)):
     produto = db.get(Produto, produto_id)
     if not produto:

@@ -145,7 +145,7 @@ class UsuarioCreate(BaseModel):
     nome: str
     email: str
     senha: str = Field(min_length=6)
-    perfil: str = Field(pattern="^(caixa|estoquista|gerente)$")
+    perfil: str = Field(pattern="^(funcionario|gerente)$")
 
 
 class UsuarioOut(BaseModel):
