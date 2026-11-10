@@ -139,3 +139,24 @@ class ProdutoUpdate(BaseModel):
     codigo_barras: str | None = None
     categoria_id: int | None = None
     preco_venda: Decimal | None = Field(default=None, ge=0)
+
+
+class UsuarioCreate(BaseModel):
+    nome: str
+    email: str
+    senha: str = Field(min_length=6)
+    perfil: str = Field(pattern="^(caixa|estoquista|gerente)$")
+
+
+class UsuarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nome: str
+    email: str
+    perfil: str
+    ativo: bool
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

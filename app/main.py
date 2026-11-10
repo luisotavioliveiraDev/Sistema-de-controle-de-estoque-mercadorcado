@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Categoria
 from app.schemas import CategoriaCreate, CategoriaOut
-from app.routers import estoque, perdas, produtos, relatorios
+from app.routers import auth, estoque, perdas, produtos, relatorios
 
 app = FastAPI(title="Controle de Estoque")
+app.include_router(auth.router)
 app.include_router(produtos.router)
 app.include_router(estoque.router)
 app.include_router(perdas.router)

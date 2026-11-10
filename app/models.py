@@ -62,3 +62,13 @@ class Movimentacao(Base):
     desconto_percentual: Mapped[int] = mapped_column(Integer, default=0)
     motivo: Mapped[str | None] = mapped_column(String(100))
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str] = mapped_column(String(150), unique=True)
+    senha_hash: Mapped[str] = mapped_column(String(255))
+    perfil: Mapped[str] = mapped_column(String(20))  # caixa, estoquista, gerente
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True)
