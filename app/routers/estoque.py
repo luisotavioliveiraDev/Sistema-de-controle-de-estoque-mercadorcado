@@ -43,7 +43,11 @@ def entrada_lote(dados: LoteCreate, db: Session = Depends(get_db)):
     produto = db.get(Produto, dados.produto_id)
     if not produto or not produto.ativo:
         raise HTTPException(404, "Produto não encontrado")
-
+    if dados.validade < date.today():
+        raise HTTPException(
+            400, "Não é possível dar entrada em lote com validade já vencida"
+        )
+    
     quantidade_base = converter_para_base(produto, dados.quantidade, dados.unidade)
 
     lote = Lote(

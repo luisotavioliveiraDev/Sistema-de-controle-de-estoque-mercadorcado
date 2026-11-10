@@ -132,3 +132,10 @@ class MovimentacaoOut(BaseModel):
     desconto_percentual: int
     motivo: str | None
     criado_em: datetime
+
+
+class ProdutoUpdate(BaseModel):
+    nome: str | None = None
+    codigo_barras: str | None = None
+    categoria_id: int | None = None
+    preco_venda: Decimal | None = Field(default=None, ge=0)

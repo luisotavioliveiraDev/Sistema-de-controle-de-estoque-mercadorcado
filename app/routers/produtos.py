@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Categoria, ConversaoUnidade, Produto
-from app.schemas import ProdutoCreate, ProdutoOut
+from app.schemas import ProdutoCreate, ProdutoOut, ProdutoUpdate
 
 router = APIRouter(prefix="/produtos", tags=["Produtos"])
 
@@ -51,6 +51,40 @@ def buscar_produto(produto_id: int, db: Session = Depends(get_db)):
     produto = db.get(Produto, produto_id)
     if not produto or not produto.ativo:
         raise HTTPException(404, "Produto não encontrado")
+    return produto
+
+
+@router.put("/{produto_id}", response_model=ProdutoOut)
+def editar_produto(
+    produto_id: int, dados: ProdutoUpdate, db: Session = Depends(get_db)
+):
+    """Atualiza só os campos enviados (nome, código de barras, categoria, preço)."""
+    produto = db.get(Produto, produto_id)
+    if not produto or not produto.ativo:
+        raise HTTPException(404, "Produto não encontrado")
+
+    campos = dados.model_dump(exclude_unset=True)
+
+    if "categoria_id" in campos:
+        categoria = db.get(Categoria, campos["categoria_id"])
+        if not categoria or not categoria.ativo:
+            raise HTTPException(404, "Categoria não encontrada")
+
+    if campos.get("codigo_barras"):
+        outro = db.scalar(
+            select(Produto).where(
+                Produto.codigo_barras == campos["codigo_barras"],
+                Produto.id != produto_id,
+            )
+        )
+        if outro:
+            raise HTTPException(409, "Código de barras já cadastrado em outro produto")
+
+    for campo, valor in campos.items():
+        setattr(produto, campo, valor)
+
+    db.commit()
+    db.refresh(produto)
     return produto
 
 
