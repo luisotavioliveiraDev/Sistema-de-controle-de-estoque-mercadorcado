@@ -8,8 +8,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Lote, Movimentacao
 from app.schemas import PerdaCreate, PerdaOut, PerdaVencidosOut
+from app.security import usuario_atual
 
-router = APIRouter(prefix="/perdas", tags=["Perdas"])
+router = APIRouter(
+    prefix="/perdas",
+    tags=["Perdas"],
+    dependencies=[Depends(usuario_atual)],
+)
 
 CENTAVOS = Decimal("0.01")
 
