@@ -1,14 +1,16 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./estoque.db"
-# Depois, no PostgreSQL:
-# DATABASE_URL = "postgresql+psycopg2://usuario:senha@localhost:5432/estoque"
+load_dotenv()
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},  # só para SQLite; remova no PostgreSQL
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./estoque.db")
+
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
 

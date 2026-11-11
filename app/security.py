@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
@@ -10,8 +11,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Usuario
 
-# Em produção, a chave vem de uma variável de ambiente (.env), nunca do código
-SECRET_KEY = os.getenv("SECRET_KEY", "troque-esta-chave-antes-de-usar-de-verdade")
+load_dotenv()
+SECRET_KEY = os.environ["SECRET_KEY"]  # sem valor padrão: se faltar, o servidor não sobe
 ALGORITMO = "HS256"
 EXPIRA_MINUTOS = 60 * 8  # o token vale 8 horas
 
@@ -52,7 +53,7 @@ def usuario_atual(
 
 
 def exigir_perfil(*perfis: str):
-    """Uso nas rotas: Depends(exigir_perfil("gerente", "estoquista"))"""
+    """Uso nas rotas: Depends(exigir_perfil("gerente"))"""
 
     def verificador(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
         if usuario.perfil not in perfis:
