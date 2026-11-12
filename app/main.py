@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import get_db
 from app.models import Categoria
@@ -14,6 +15,21 @@ app.include_router(produtos.router)
 app.include_router(estoque.router)
 app.include_router(perdas.router)
 app.include_router(relatorios.router)
+
+app = FastAPI(title="Controle de Estoque")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
 
 
 @app.post(
